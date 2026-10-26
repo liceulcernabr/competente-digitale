@@ -64,6 +64,7 @@ V.acasa=()=>{
   </section>
   <div class="grid">
     <a class="tile" href="#teorie"><h3>Teorie</h3><p>${THEORY.length} capitole, cu pașii pentru Microsoft Office și LibreOffice.</p></a>
+    <a class="tile" href="#afise"><h3>Afișe recapitulative</h3><p>${POSTERS.length} afișe cu ce trebuie reținut la fiecare subiect. Se pot tipări.</p></a>
     <a class="tile" href="#intrebari"><h3>Subiectul II</h3><p>${OPEN_Q.length} întrebări cu model de răspuns.</p></a>
     <a class="tile" href="#grile"><h3>Grile rapide</h3><p>${MCQ.length} întrebări cu verificare automată.</p></a>
     <a class="tile" href="#exercitii"><h3>Exerciții practice</h3><p>${practical} cerințe pe aplicații. Rezolvate: <b id="pcount">${done}</b>.</p></a>
@@ -86,10 +87,21 @@ V.teorie=(id)=>{
     return;
   }
   const i=THEORY.indexOf(ch), prev=THEORY[i-1], next=THEORY[i+1];
-  const rel=ALL.filter(t=>t.app===ch.app).length;
-  main.innerHTML=`<p class="noprint"><a href="#teorie">← Toate capitolele</a></p><div class="sheet plain"><h1>${esc(ch.title)}</h1><div class="tablewrap">${ch.html}</div></div>
-  <div class="row noprint">${rel?`<a class="btn" href="#exercitii/${ch.app}">Exersează: ${rel} cerințe ${esc(APPS[ch.app])}</a>`:""}
+  const rel=ALL.filter(t=>t.app===ch.app).length, af=POSTERS.find(p=>p.theory===ch.id);
+  main.innerHTML=`<p class="noprint"><a href="#teorie">← Toate capitolele</a>${af?` · <a href="#afise/${af.id}">Afișul capitolului</a>`:""}</p><div class="sheet plain"><h1>${esc(ch.title)}</h1><div class="tablewrap">${ch.html}</div></div>
+  <div class="row noprint">${rel?`<a class="btn" href="#exercitii/${ch.app}">Exersează: ${rel} cerințe ${esc(APPS[ch.app])}</a>`:""}${af?`<a class="btn ghost" href="#afise/${af.id}">Afișul capitolului</a>`:""}
   ${prev?`<a class="btn ghost" href="#teorie/${prev.id}">← ${esc(prev.title)}</a>`:""}${next?`<a class="btn ghost" href="#teorie/${next.id}">${esc(next.title)} →</a>`:""}</div>`;
+};
+
+V.afise=(id)=>{
+  const p=POSTERS.find(x=>x.id===id)||POSTERS[0], i=POSTERS.indexOf(p), prev=POSTERS[i-1], next=POSTERS[i+1];
+  const grupe=[["Proba D",x=>x.id==="proba"],["Subiectul I",x=>x.tag.startsWith("Subiectul I ")],["Subiectul al II-lea",x=>x.tag.startsWith("Subiectul al II-lea")],["Subiectul al III-lea",x=>x.tag.startsWith("Subiectul al III-lea")]];
+  main.innerHTML=`<h1 class="noprint">Afișe recapitulative</h1><p class="muted noprint">Ce trebuie să reții la fiecare subiect, pe o singură pagină. Alege un afiș; îl poți și tipări.</p>
+  <div class="af-pick">${grupe.map(([n,f])=>`<div class="grp"><b>${n}</b>${POSTERS.filter(f).map(x=>`<a class="chip ${x===p?"on":""}" href="#afise/${x.id}">${esc(x.title)}</a>`).join("")}</div>`).join("")}</div>
+  ${posterHTML(p)}
+  <div class="row noprint"><button class="btn" type="button" onclick="print()">Tipărește afișul</button>
+  <a class="btn ghost" href="#teorie/${p.theory}">Teoria completă</a>
+  ${prev?`<a class="btn ghost" href="#afise/${prev.id}">← ${esc(prev.title)}</a>`:""}${next?`<a class="btn ghost" href="#afise/${next.id}">${esc(next.title)} →</a>`:""}</div>`;
 };
 
 V.intrebari=()=>{
