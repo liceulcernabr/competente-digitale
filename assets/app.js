@@ -133,24 +133,45 @@ V.intrebari=()=>{
 
 V.grile=()=>{
   const order=MCQ.map((q,i)=>i).sort(()=>Math.random()-.5).slice(0,15);
-  let pos=0, good=0;
-  main.innerHTML=`<h1>Grile rapide</h1><p class="muted">15 întrebări alese la întâmplare din ${MCQ.length}. Reîncarcă pagina pentru un set nou.</p><div class="progress"><i id="bar"></i></div><div id="qz"></div>`;
+  const total=order.length, later=new Set();
+  let queue=order.slice(), done=0, good=0;
+  main.innerHTML=`<h1>Grile rapide</h1><p class="muted">15 întrebări alese la întâmplare din ${MCQ.length}. Alege o variantă și apasă <b>Trimite răspunsul</b>. Poți schimba alegerea cu <b>Modifică răspunsul</b> sau poți lăsa întrebarea pentru final cu <b>Răspunde mai târziu</b>.</p><div class="progress"><i id="bar"></i></div><div id="qz"></div>`;
   const render=()=>{
-    $("#bar").style.width=(pos/order.length*100)+"%";
-    if(pos>=order.length){
-      $("#qz").innerHTML=`<div class="sheet plain"><div class="score">${good}/${order.length}</div><p>${good>=12?"Foarte bine – ești pregătit pentru Subiectul al II-lea.":good>=8?"Bine. Recitește capitolele de teorie la care ai greșit.":"Parcurge capitolele de teorie și reia testul."}</p><button class="btn" id="again">Set nou</button> <a class="btn ghost" href="#teorie/hardware">Teorie</a></div>`;
+    $("#bar").style.width=(done/total*100)+"%";
+    if(!queue.length){
+      $("#qz").innerHTML=`<div class="sheet plain"><div class="score">${good}/${total}</div><p>${good>=12?"Foarte bine – ești pregătit pentru Subiectul al II-lea.":good>=8?"Bine. Recitește capitolele de teorie la care ai greșit.":"Parcurge capitolele de teorie și reia testul."}</p><button class="btn" id="again">Set nou</button> <a class="btn ghost" href="#teorie/hardware">Teorie</a></div>`;
       $("#again").onclick=()=>V.grile(); return;
     }
-    const q=MCQ[order[pos]];
-    $("#qz").innerHTML=`<div class="sheet"><span class="mlabel" style="top:28px">${pos+1}</span><p style="font-family:var(--serif);font-size:1.25rem;font-weight:700;color:var(--ink)">${esc(q[0])}</p>
-      ${q[1].map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}<div class="row" style="margin-top:12px"><span class="msg" id="m"></span><button class="btn" id="nx" hidden>Următoarea →</button></div></div>`;
-    $$(".opt").forEach(b=>b.onclick=()=>{
-      if($("#nx").hidden===false) return;
-      const i=+b.dataset.i; $$(".opt")[q[2]].classList.add("good");
-      if(i===q[2]){ good++; $("#m").textContent="Corect"; $("#m").className="msg ok"; } else { b.classList.add("bad"); $("#m").textContent="Răspunsul corect este marcat cu verde"; $("#m").className="msg no"; }
-      $("#nx").hidden=false; $("#nx").focus();
-    });
-    $("#nx").onclick=()=>{ pos++; render(); };
+    const qi=queue[0], q=MCQ[qi]; let sel=null, sent=false;
+    const rest=queue.length-1, nLater=queue.filter(i=>later.has(i)).length;
+    $("#qz").innerHTML=`<div class="sheet"><span class="mlabel" style="top:28px">${order.indexOf(qi)+1}</span>
+      <p class="meta">Răspunse: ${done} din ${total}${nLater?` · amânate: ${nLater}`:""}${later.has(qi)?` · <b>întrebare amânată</b>`:""}</p>
+      <p style="font-family:var(--serif);font-size:1.25rem;font-weight:700;color:var(--ink)">${esc(q[0])}</p>
+      ${q[1].map((o,i)=>`<button class="opt" data-i="${i}">${esc(o)}</button>`).join("")}
+      <div class="row qbtns" style="margin-top:12px;flex-wrap:wrap;gap:8px">
+        <button class="btn" id="send" disabled>Trimite răspunsul</button>
+        <button class="btn ghost" id="edit" disabled>Modifică răspunsul</button>
+        <button class="btn ghost" id="later" ${rest?"":"disabled title='Este ultima întrebare rămasă'"}>Răspunde mai târziu</button>
+        <span class="msg" id="m"></span>
+        <button class="btn" id="nx" hidden>${rest?"Următoarea →":"Vezi rezultatul →"}</button>
+      </div></div>`;
+    const opts=$$(".opt"), upd=()=>{
+      opts.forEach((b,i)=>{ b.classList.toggle("sel",i===sel); b.disabled=sent||(sel!==null&&i!==sel); });
+      $("#send").disabled=sel===null||sent; $("#edit").disabled=sel===null||sent;
+      $("#m").textContent=sel!==null&&!sent?"Varianta aleasă e marcată. Trimite-o sau modific-o.":$("#m").textContent;
+    };
+    opts.forEach(b=>b.onclick=()=>{ if(sent) return; sel=+b.dataset.i; upd(); });
+    $("#edit").onclick=()=>{ sel=null; $("#m").textContent=""; upd(); opts[0].focus(); };
+    $("#later").onclick=()=>{ later.add(qi); queue.push(queue.shift()); render(); };
+    $("#send").onclick=()=>{
+      if(sel===null) return; sent=true; done++; later.delete(qi);
+      opts[q[2]].classList.add("good");
+      if(sel===q[2]){ good++; $("#m").textContent="Corect"; $("#m").className="msg ok"; }
+      else { opts[sel].classList.add("bad"); $("#m").textContent="Răspunsul corect este marcat cu verde"; $("#m").className="msg no"; }
+      upd(); ["send","edit","later"].forEach(id=>$("#"+id).hidden=true);
+      $("#bar").style.width=(done/total*100)+"%"; $("#nx").hidden=false; $("#nx").focus();
+    };
+    $("#nx").onclick=()=>{ queue.shift(); render(); };
   };
   render();
 };
